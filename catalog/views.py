@@ -1,7 +1,10 @@
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render
 from django.views import generic
 from .models import Book, Author, BookInstance, Genre
 
+@login_required
 def index(request):
     """View function for the home page of the site"""
 
@@ -36,22 +39,39 @@ def index(request):
     return render(request, 'catalog/index.html', context=context)
 
 
-class BookListView(generic.ListView):
+class BookListView(LoginRequiredMixin, generic.ListView):
+    login_url = '/login/'
     model = Book
     paginate_by = 10
     context_object_name = 'book_list'
 
     queryset = Book.objects.all()
 
-class BookDetailView(generic.DetailView):
+class BookDetailView(LoginRequiredMixin, generic.DetailView):
     model = Book
 
-class AuthorListView(generic.ListView):
+class AuthorListView(LoginRequiredMixin, generic.ListView):
+    login_url = '/login/'
     model = Author
     paginate_by = 10
     context_object_name = 'author_list'
 
     queryset = Author.objects.all()
 
-class AuthorDetailView(generic.DetailView):
+class AuthorDetailView(LoginRequiredMixin, generic.DetailView):
+    login_url = '/login/'
     model = Author
+
+
+class LoanedBooksByUserListView(LoginRequiredMixin, generic.ListView):
+    """Generic class-based view listing books on loan to current user."""
+    model = BookInstance
+    template_name = 'catalog/bookinstance_list_borrowed_user.html'
+    paginate_by = 5
+
+    def get_queryset(self):
+        return (
+            BookInstance.objects.filter(borrower=self.request.user)
+            .filter(status__exact='o')
+            .order_by('due_back')
+        )
